@@ -1,0 +1,56 @@
+--Q1 - Business User question - Marginal complexity: What is the average List Price of all products?
+SELECT AVG(ListPrice) AS AverageListPrice
+FROM Production.Product;
+
+--Q2 - Business User question - Marginal complexity: Which employees have the highest SalesYTD?
+SELECT TOP 10 BusinessEntityID, SalesYTD
+FROM Sales.SalesPerson
+ORDER BY SalesYTD DESC;
+
+--Q3 - Business User question - Moderate complexity: I need to find out which products sold the most units in Q1 2013 and the average unit price.
+SELECT TOP 10 P.Name, SUM(SD.OrderQty) AS TotalUnitsSold, AVG(SD.UnitPrice) AS AverageUnitPrice
+FROM Sales.SalesOrderDetail SD
+JOIN Production.Product P ON SD.ProductID = P.ProductID
+JOIN Sales.SalesOrderHeader SH ON SD.SalesOrderID = SH.SalesOrderID
+WHERE SH.OrderDate BETWEEN '2013-01-01' AND '2013-03-31'
+GROUP BY P.Name
+ORDER BY TotalUnitsSold DESC;
+
+--Q4 - Business User question - Moderate complexity: Can you provide a list of the top 50 customers, ranked by purchase frequency, along with their average order values?
+SELECT TOP 50 C.CustomerID, COUNT(SH.SalesOrderID) AS PurchaseFrequency, AVG(SH.TotalDue) AS AverageOrderValue
+FROM Sales.Customer C
+JOIN Sales.SalesOrderHeader SH ON C.CustomerID = SH.CustomerID
+GROUP BY C.CustomerID
+ORDER BY PurchaseFrequency DESC;
+
+--Q5 - Business User question - Increased complexity: We want to know the impact of promotions on Sales Orders in 2012. Can you provide a list that shows order quantities, special offer IDs, and sales trends by month?
+SELECT YEAR(SH.OrderDate) AS OrderYear, MONTH(SH.OrderDate) AS OrderMonth, P.SpecialOfferID, SUM(SD.OrderQty) AS TotalOrderQty
+FROM Sales.SalesOrderDetail SD
+JOIN Sales.SalesOrderHeader SH ON SD.SalesOrderID = SH.SalesOrderID
+JOIN Sales.SpecialOfferProduct SOP ON SD.ProductID = SOP.ProductID
+JOIN Sales.SpecialOffer P ON SOP.SpecialOfferID = P.SpecialOfferID
+WHERE SH.OrderDate BETWEEN '2012-01-01' AND '2012-12-31'
+GROUP BY YEAR(SH.OrderDate), MONTH(SH.OrderDate), P.SpecialOfferID
+ORDER BY OrderYear, OrderMonth, P.SpecialOfferID;
+
+--Q6 - Business User question - Increased complexity: For a detailed inventory analysis, I need a list of our top 20 products by sales volume in 2013. Additionally, I want to know the quantity on hand, reorder point, and suggested reorder quantity.
+SELECT TOP 20 P.Name, SUM(SD.OrderQty) AS TotalSalesVolume, MAX(PI.Quantity) AS QuantityOnHand, MAX(P.ReorderPoint) AS ReorderPoint, MAX(P.SafetyStockLevel) AS SuggestedReorderQty
+FROM Sales.SalesOrderDetail SD
+JOIN Production.Product P ON SD.ProductID = P.ProductID
+JOIN Production.ProductInventory PI ON P.ProductID = PI.ProductID
+JOIN Sales.SalesOrderHeader SH ON SD.SalesOrderID = SH.SalesOrderID
+WHERE SH.OrderDate BETWEEN '2013-01-01' AND '2013-12-31'
+GROUP BY P.Name
+ORDER BY TotalSalesVolume DESC;
+
+--Q7 - Metadata question: Which tables contain the column 'ProductModelID'?
+SELECT TABLE_NAME
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE COLUMN_NAME = 'ProductModelID';
+
+--Q8 - Metadata question: What are the primary keys of all the sales related tables?
+SELECT t.TABLE_NAME, k.COLUMN_NAME
+FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS t
+JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
+ON t.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+WHERE t.CONSTRAINT_TYPE = 'PRIMARY KEY' AND t.TABLE_NAME LIKE 'Sales%';
